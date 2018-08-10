@@ -8,6 +8,12 @@ project(NodeJS-Http-Parser VERSION 2.8.1 LANGUAGES C)
 
 option(HTTP_PARSER_DOWNLOAD_TO_BINARY_DIR "Prefer downloading http-parser to the binary directory instead of source directory" OFF)
 
+set(HTTP_PARSER_URL "https://github.com/nodejs/http-parser/archive/v2.8.1.tar.gz" CACHE STRING "http-parser download URL")
+set(HTTP_PARSER_URL_SHA256 "51615f68b8d67eadfd2482decc63b3e55d749ce0055502bbb5b0032726d22d96" CACHE STRING "http-parser download URL SHA256 checksum")
+set(HTTP_PARSER_ARCHIVE_DIRECTORY "" CACHE DIRECTORY "Use the specified local directory to search for http-parser archives instead of downloading them")
+
+unset(HTTP_PARSER_SOURCE CACHE)
+
 # Downloading to the binary dir provides a better isolation
 # But in some circomstances, you want to share the download between multiple build folders
 if(HTTP_PARSER_DOWNLOAD_TO_BINARY_DIR)
@@ -95,17 +101,28 @@ if(NOT IS_DIRECTORY "${EXTRACT_PATH}")
   file(RENAME "${EXTRACT_PATH}.tmp" "${EXTRACT_PATH}")
   endif()
 
-  set(HTTP_PARSER_SOURCE "${EXTRACT_PATH}" CACHE STRING "http-parser location" FORCE)
+  file(GLOB download_parser_root "${EXTRACT_PATH}/http-parser*")
+  if(download_parser_root)
+    set(HTTP_PARSER_SOURCE "${download_parser_root}" CACHE STRING "http-parser location" FORCE)
+  endif()
 endif()
 
+
 file(READ "${HTTP_PARSER_SOURCE}/Makefile" http_parser_makefile)
-string(REGEX MATCH "SOMAJOR\s+=\s+([0-9]*)" _ ${http_parser_makefile})
+
+# message("####################")
+# message(${http_parser_makefile})
+# message("####################")
+
+
+set(PARSER_REGEX_WS "[\\r\\n\\t ]+")
+string(REGEX MATCH "^SOMAJOR\s+=\s+([0-9]*)" _ ${http_parser_makefile})
 set(HTTP_PARSER_VERS_MAJOR ${CMAKE_MATCH_1})
 
-string(REGEX MATCH "SOMINOR\s+=\s+([0-9]*)" _ ${http_parser_makefile})
+string(REGEX MATCH "^SOMINOR\\s+=\\s+([0-9]*)" _ ${http_parser_makefile})
 set(HTTP_PARSER_VERS_MINOR ${CMAKE_MATCH_1})
 
-string(REGEX MATCH "SOREV\s+=\s+([0-9]*)" _ ${http_parser_makefile})
+string(REGEX MATCH "^SOREV\\s+=\\s+([0-9]*)" _ ${http_parser_makefile})
 set(HTTP_PARSER_VERS_PATCH ${CMAKE_MATCH_1})
 
 set(HTTP_PARSER_VERSION "${HTTP_PARSER_VERS_MAJOR}.${HTTP_PARSER_VERS_MINOR}.${HTTP_PARSER_VERS_PATCH}")
